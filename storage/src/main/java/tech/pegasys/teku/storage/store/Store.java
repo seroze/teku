@@ -95,7 +95,9 @@ class Store implements UpdatableStore {
   final CachingTaskQueue<Bytes32, StateAndBlockSummary> states;
   final Map<Bytes32, SignedBeaconBlock> blocks;
   final CachingTaskQueue<SlotAndBlockRoot, BeaconState> checkpointStates;
-  final Map<UInt64, VoteTracker> votes;
+  //final Map<UInt64, VoteTracker> votes;
+  VoteTracker[] votes;
+  public static final int VOTE_TRACKER_SIZE=16;
   private ForkChoiceStrategy forkChoiceStrategy;
 
   private Store(
@@ -112,7 +114,8 @@ class Store implements UpdatableStore {
       final Checkpoint justified_checkpoint,
       final Checkpoint best_justified_checkpoint,
       final BlockMetadataStore blockMetadata,
-      final Map<UInt64, VoteTracker> votes,
+      //final Map<UInt64, VoteTracker> votes,
+      final VoteTracker[] votes,
       final Map<Bytes32, SignedBeaconBlock> blocks,
       final CachingTaskQueue<SlotAndBlockRoot, BeaconState> checkpointStates) {
     checkArgument(
@@ -137,7 +140,7 @@ class Store implements UpdatableStore {
     this.justified_checkpoint = justified_checkpoint;
     this.best_justified_checkpoint = best_justified_checkpoint;
     this.blocks = blocks;
-    this.votes = new HashMap<>(votes);
+    this.votes = new VoteTracker[VOTE_TRACKER_SIZE] ;//new HashMap<>(votes);
     this.blockMetadata = blockMetadata;
 
     // Track latest finalized block
@@ -170,7 +173,7 @@ class Store implements UpdatableStore {
       final Checkpoint justifiedCheckpoint,
       final Checkpoint bestJustifiedCheckpoint,
       final Map<Bytes32, StoredBlockMetadata> blockInfoByRoot,
-      final Map<UInt64, VoteTracker> votes,
+      final VoteTracker[] votes,
       final StoreConfig config,
       final ProtoArrayStorageChannel protoArrayStorageChannel) {
 
@@ -514,7 +517,12 @@ class Store implements UpdatableStore {
   Set<UInt64> getVotedValidatorIndices() {
     readLock.lock();
     try {
-      return new HashSet<>(votes.keySet());
+      HashSet<UInt64> hs = new HashSet<>();
+      for(int i=0;i<VOTE_TRACKER_SIZE;++i){
+        if(votes[i]!=null)hs.add(UInt64.valueOf((long) i));//is this logic correct
+      }
+      return hs;
+      //return new HashSet<>(votes.keySet());
     } finally {
       readLock.unlock();
     }
@@ -523,7 +531,8 @@ class Store implements UpdatableStore {
   VoteTracker getVote(UInt64 validatorIndex) {
     readLock.lock();
     try {
-      return votes.get(validatorIndex);
+      return votes[validatorIndex.intValue()];
+      //return votes.get(validatorIndex);
     } finally {
       readLock.unlock();
     }
