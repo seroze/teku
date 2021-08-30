@@ -48,7 +48,6 @@ public class StoreBuilder {
   private AnchorPoint latestFinalized;
   private Checkpoint justifiedCheckpoint;
   private Checkpoint bestJustifiedCheckpoint;
-  //private Map<UInt64, VoteTracker> votes;
   private VoteTracker[] votes;
   private ProtoArrayStorageChannel protoArrayStorageChannel = ProtoArrayStorageChannel.NO_OP;
 

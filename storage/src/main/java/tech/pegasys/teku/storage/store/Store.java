@@ -23,12 +23,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -95,9 +92,9 @@ class Store implements UpdatableStore {
   final CachingTaskQueue<Bytes32, StateAndBlockSummary> states;
   final Map<Bytes32, SignedBeaconBlock> blocks;
   final CachingTaskQueue<SlotAndBlockRoot, BeaconState> checkpointStates;
-  //final Map<UInt64, VoteTracker> votes;
   VoteTracker[] votes;
-  public static final int VOTE_TRACKER_SIZE=16;
+  public static final int VOTE_TRACKER_SIZE = 16;
+  UInt64 highestVotedValidatorIndex;
   private ForkChoiceStrategy forkChoiceStrategy;
 
   private Store(
@@ -114,7 +111,6 @@ class Store implements UpdatableStore {
       final Checkpoint justified_checkpoint,
       final Checkpoint best_justified_checkpoint,
       final BlockMetadataStore blockMetadata,
-      //final Map<UInt64, VoteTracker> votes,
       final VoteTracker[] votes,
       final Map<Bytes32, SignedBeaconBlock> blocks,
       final CachingTaskQueue<SlotAndBlockRoot, BeaconState> checkpointStates) {
@@ -140,7 +136,14 @@ class Store implements UpdatableStore {
     this.justified_checkpoint = justified_checkpoint;
     this.best_justified_checkpoint = best_justified_checkpoint;
     this.blocks = blocks;
-    this.votes = new VoteTracker[VOTE_TRACKER_SIZE] ;//new HashMap<>(votes);
+    this.votes = new VoteTracker[VOTE_TRACKER_SIZE];
+    for (int i = VOTE_TRACKER_SIZE; i >= 0; --i) {
+      this.votes[i] = votes[i];
+      if (this.votes[i] != null) {
+        this.highestVotedValidatorIndex = UInt64.valueOf(i);
+        break;
+      }
+    }
     this.blockMetadata = blockMetadata;
 
     // Track latest finalized block
@@ -514,15 +517,10 @@ class Store implements UpdatableStore {
             blockRoot -> SafeFuture.completedFuture(Optional.of(latestStateAtEpoch))));
   }
 
-  Set<UInt64> getVotedValidatorIndices() {
+  UInt64 getHighestVotedValidatorIndex() {
     readLock.lock();
     try {
-      HashSet<UInt64> hs = new HashSet<>();
-      for(int i=0;i<VOTE_TRACKER_SIZE;++i){
-        if(votes[i]!=null)hs.add(UInt64.valueOf((long) i));//is this logic correct
-      }
-      return hs;
-      //return new HashSet<>(votes.keySet());
+      return highestVotedValidatorIndex;
     } finally {
       readLock.unlock();
     }
@@ -532,7 +530,7 @@ class Store implements UpdatableStore {
     readLock.lock();
     try {
       return votes[validatorIndex.intValue()];
-      //return votes.get(validatorIndex);
+      // return votes.get(validatorIndex);
     } finally {
       readLock.unlock();
     }

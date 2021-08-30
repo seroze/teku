@@ -40,12 +40,14 @@ public abstract class AbstractSszPrimitiveSchema<
 
   private final int bitsSize;
   private final int sszSize;
+  private final SszLengthBounds sszLengthBounds;
 
   protected AbstractSszPrimitiveSchema(int bitsSize) {
     checkArgument(
         bitsSize > 0 && bitsSize <= 256 && 256 % bitsSize == 0, "Invalid bitsize: %s", bitsSize);
     this.bitsSize = bitsSize;
     this.sszSize = getSSZBytesSize();
+    this.sszLengthBounds = SszLengthBounds.ofBits(bitsSize);
   }
 
   @Override
@@ -104,7 +106,6 @@ public abstract class AbstractSszPrimitiveSchema<
 
   @Override
   public int sszSerializeTree(TreeNode node, SszWriter writer) {
-    int sszBytesSize = getSSZBytesSize();
     final Bytes nodeData;
     if (node instanceof LeafDataNode) {
       // small perf optimization
@@ -112,21 +113,25 @@ public abstract class AbstractSszPrimitiveSchema<
     } else {
       nodeData = node.hashTreeRoot();
     }
-    writer.write(nodeData.toArrayUnsafe(), 0, sszBytesSize);
-    return sszBytesSize;
+    writer.write(nodeData.toArrayUnsafe(), 0, sszSize);
+    return sszSize;
   }
 
   @Override
   public TreeNode sszDeserializeTree(SszReader reader) {
-    Bytes bytes = reader.read(getSSZBytesSize());
+    Bytes bytes = reader.read(sszSize);
     if (reader.getAvailableBytes() > 0) {
       throw new SszDeserializeException("Extra " + reader.getAvailableBytes() + " bytes found");
     }
+    return createNodeFromSszBytes(bytes);
+  }
+
+  protected LeafNode createNodeFromSszBytes(final Bytes bytes) {
     return LeafNode.create(bytes);
   }
 
   @Override
   public SszLengthBounds getSszLengthBounds() {
-    return SszLengthBounds.ofBits(getBitsSize());
+    return sszLengthBounds;
   }
 }

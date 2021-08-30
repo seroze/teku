@@ -121,17 +121,16 @@ public class KvStoreDatabase implements Database {
 
   public static Database createV6(
       final MetricsSystem metricsSystem,
-      final KvStoreAccessor hotDb,
-      final KvStoreAccessor finalizedDb,
+      final KvStoreAccessor db,
       final SchemaHot schemaHot,
       final SchemaFinalized schemaFinalized,
       final StateStorageMode stateStorageMode,
       final long stateStorageFrequency,
       final boolean storeNonCanonicalBlocks,
       final Spec spec) {
-    final V4HotKvStoreDao dao = new V4HotKvStoreDao(hotDb, schemaHot);
+    final V4HotKvStoreDao dao = new V4HotKvStoreDao(db, schemaHot);
     final V4FinalizedKvStoreDao finalizedDbDao =
-        new V4FinalizedKvStoreDao(finalizedDb, schemaFinalized, stateStorageFrequency);
+        new V4FinalizedKvStoreDao(db, schemaFinalized, stateStorageFrequency);
     return new KvStoreDatabase(
         metricsSystem,
         dao,
@@ -277,7 +276,13 @@ public class KvStoreDatabase implements Database {
     final Checkpoint bestJustifiedCheckpoint = hotDao.getBestJustifiedCheckpoint().orElseThrow();
     final BeaconState finalizedState = hotDao.getLatestFinalizedState().orElseThrow();
 
-    final Map<UInt64, VoteTracker> votes = hotDao.getVotes();
+    final Map<UInt64, VoteTracker> votes2 = hotDao.getVotes();
+    final VoteTracker[] votes = new VoteTracker[16];
+    for (int i = 0; i < 16; ++i) {
+      if (votes2.get(UInt64.valueOf(i)) != null) {
+        votes[i] = votes2.get(UInt64.valueOf(i));
+      }
+    }
 
     // Build map with block information
     final Map<Bytes32, StoredBlockMetadata> blockInformation = new HashMap<>();
