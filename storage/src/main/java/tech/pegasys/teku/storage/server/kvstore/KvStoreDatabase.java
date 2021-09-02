@@ -276,13 +276,7 @@ public class KvStoreDatabase implements Database {
     final Checkpoint bestJustifiedCheckpoint = hotDao.getBestJustifiedCheckpoint().orElseThrow();
     final BeaconState finalizedState = hotDao.getLatestFinalizedState().orElseThrow();
 
-    final Map<UInt64, VoteTracker> votes2 = hotDao.getVotes();
-    final VoteTracker[] votes = new VoteTracker[16];
-    for (int i = 0; i < 16; ++i) {
-      if (votes2.get(UInt64.valueOf(i)) != null) {
-        votes[i] = votes2.get(UInt64.valueOf(i));
-      }
-    }
+    final Map<UInt64, VoteTracker> votes = hotDao.getVotes();
 
     // Build map with block information
     final Map<Bytes32, StoredBlockMetadata> blockInformation = new HashMap<>();

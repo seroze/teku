@@ -111,7 +111,7 @@ class Store implements UpdatableStore {
       final Checkpoint justified_checkpoint,
       final Checkpoint best_justified_checkpoint,
       final BlockMetadataStore blockMetadata,
-      final VoteTracker[] votes,
+      final Map<UInt64, VoteTracker> votes,
       final Map<Bytes32, SignedBeaconBlock> blocks,
       final CachingTaskQueue<SlotAndBlockRoot, BeaconState> checkpointStates) {
     checkArgument(
@@ -137,13 +137,13 @@ class Store implements UpdatableStore {
     this.best_justified_checkpoint = best_justified_checkpoint;
     this.blocks = blocks;
     this.votes = new VoteTracker[VOTE_TRACKER_SIZE];
-    for (int i = VOTE_TRACKER_SIZE; i >= 0; --i) {
-      this.votes[i] = votes[i];
-      if (this.votes[i] != null) {
-        this.highestVotedValidatorIndex = UInt64.valueOf(i);
-        break;
-      }
-    }
+
+    votes.forEach(
+        (key, value) -> {
+          this.votes[key.intValue()] = value;
+          this.highestVotedValidatorIndex = key.max(this.highestVotedValidatorIndex);
+        });
+
     this.blockMetadata = blockMetadata;
 
     // Track latest finalized block
@@ -176,7 +176,7 @@ class Store implements UpdatableStore {
       final Checkpoint justifiedCheckpoint,
       final Checkpoint bestJustifiedCheckpoint,
       final Map<Bytes32, StoredBlockMetadata> blockInfoByRoot,
-      final VoteTracker[] votes,
+      final Map<UInt64, VoteTracker> votes,
       final StoreConfig config,
       final ProtoArrayStorageChannel protoArrayStorageChannel) {
 

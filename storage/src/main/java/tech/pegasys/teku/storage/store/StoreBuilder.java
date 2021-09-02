@@ -48,7 +48,7 @@ public class StoreBuilder {
   private AnchorPoint latestFinalized;
   private Checkpoint justifiedCheckpoint;
   private Checkpoint bestJustifiedCheckpoint;
-  private VoteTracker[] votes;
+  private Map<UInt64, VoteTracker> votes;
   private ProtoArrayStorageChannel protoArrayStorageChannel = ProtoArrayStorageChannel.NO_OP;
 
   private StoreBuilder() {}
@@ -94,7 +94,7 @@ public class StoreBuilder {
         .justifiedCheckpoint(anchor.getCheckpoint())
         .bestJustifiedCheckpoint(anchor.getCheckpoint())
         .blockInformation(blockInfo)
-        .votes(new VoteTracker[Store.VOTE_TRACKER_SIZE]);
+        .votes(new HashMap<>());
   }
 
   public UpdatableStore build() {
@@ -214,7 +214,7 @@ public class StoreBuilder {
     return this;
   }
 
-  public StoreBuilder votes(final VoteTracker[] votes) {
+  public StoreBuilder votes(final Map<UInt64, VoteTracker> votes) {
     checkNotNull(votes);
     this.votes = votes;
     return this;
